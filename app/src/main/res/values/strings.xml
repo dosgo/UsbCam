@@ -5,4 +5,5 @@
     <string name="btn_shot">拍照</string>
     <string name="btn_audio_on">声音:开</string>
     <string name="btn_audio_off">声音:关</string>
+    <string name="btn_fps_auto">帧率:自动</string>
 </resources>
