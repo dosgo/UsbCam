@@ -171,10 +171,10 @@ class MainActivity : AppCompatActivity() {
         btnMenu = findViewById(R.id.btnMenu)
         menuPanel = findViewById(R.id.menuPanel)
 
-        btnSize.setOnClickListener { switchSize(); collapseMenu() }
-        btnShot.setOnClickListener { capture(); collapseMenu() }
-        btnAudio.setOnClickListener { toggleAudio(); collapseMenu() }
-        btnFps.setOnClickListener { switchFps(); collapseMenu() }
+        btnSize.setOnClickListener { switchSize() }
+        btnShot.setOnClickListener { capture() }
+        btnAudio.setOnClickListener { toggleAudio() }
+        btnFps.setOnClickListener { switchFps() }
         btnMenu.setOnClickListener {
             menuPanel.visibility = if (menuPanel.visibility == android.view.View.VISIBLE)
                 android.view.View.GONE else android.view.View.VISIBLE
