@@ -9,39 +9,51 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- 右侧竖排控制按钮，贴边半透明，不挡中间画面 -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="16dp"
+        android:layout_gravity="center_vertical|end"
+        android:layout_marginEnd="8dp"
+        android:alpha="0.8"
         android:background="#66000000"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="10dp">
-
-        <Button
-            android:id="@+id/btnFps"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_fps_auto" />
-
-        <Button
-            android:id="@+id/btnAudio"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_audio_off" />
-
-        <Button
-            android:id="@+id/btnSize"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_size" />
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="6dp">
 
         <Button
             android:id="@+id/btnShot"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:text="@string/btn_shot" />
+            android:minWidth="72dp"
+            android:text="@string/btn_shot"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnSize"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minWidth="72dp"
+            android:text="@string/btn_size"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnFps"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minWidth="72dp"
+            android:text="@string/btn_fps_auto"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minWidth="72dp"
+            android:text="@string/btn_audio_off"
+            android:textSize="12sp" />
     </LinearLayout>
 </FrameLayout>
