@@ -216,15 +216,26 @@ class MainActivity : AppCompatActivity() {
                 val idx = (sizeIndex + i) % sizeCandidates.size
                 val c = sizeCandidates[idx]
                 try {
-                    Log.d(TAG, "尝试分辨率 ${c[0]}x${c[1]} fmt=${c[2]}")
-                    cam.setPreviewSize(c[0], c[1], c[2])
+                    Log.d(TAG, "尝试分辨率 ${c[0]}x${c[1]} fmt=${c[2]} (fps 5-60)")
+                    // 宽帧率范围，让摄像头挑支持的最高帧率（采集卡常见 30/60fps）
+                    cam.setPreviewSize(c[0], c[1], 5, 60, c[2], UVCCamera.DEFAULT_BANDWIDTH)
                     sizeIndex = idx
                     previewW = c[0]
                     previewH = c[1]
                     opened = true
                     break
                 } catch (e: Exception) {
-                    Log.d(TAG, "不支持: ${e.message}")
+                    Log.d(TAG, "宽范围不支持: ${e.message}")
+                    try {
+                        cam.setPreviewSize(c[0], c[1], c[2])
+                        sizeIndex = idx
+                        previewW = c[0]
+                        previewH = c[1]
+                        opened = true
+                        break
+                    } catch (e2: Exception) {
+                        Log.d(TAG, "不支持: ${e2.message}")
+                    }
                 }
             }
 
@@ -352,12 +363,20 @@ class MainActivity : AppCompatActivity() {
                 val idx = (sizeIndex + i) % sizeCandidates.size
                 val c = sizeCandidates[idx]
                 try {
-                    cam.setPreviewSize(c[0], c[1], c[2])
+                    cam.setPreviewSize(c[0], c[1], 5, 60, c[2], UVCCamera.DEFAULT_BANDWIDTH)
                     sizeIndex = idx
                     previewW = c[0]
                     previewH = c[1]
                     break
                 } catch (e: Exception) {
+                    try {
+                        cam.setPreviewSize(c[0], c[1], c[2])
+                        sizeIndex = idx
+                        previewW = c[0]
+                        previewH = c[1]
+                        break
+                    } catch (e2: Exception) {
+                    }
                 }
             }
             runOnUiThread {
