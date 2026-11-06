@@ -20,6 +20,12 @@
         android:padding="10dp">
 
         <Button
+            android:id="@+id/btnAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_audio_off" />
+
+        <Button
             android:id="@+id/btnSize"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

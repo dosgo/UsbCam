@@ -3,4 +3,6 @@
     <string name="app_name">USB相机</string>
     <string name="btn_size">分辨率</string>
     <string name="btn_shot">拍照</string>
+    <string name="btn_audio_on">声音:开</string>
+    <string name="btn_audio_off">声音:关</string>
 </resources>

@@ -58,6 +58,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var surfaceView: SurfaceView
     private lateinit var btnSize: Button
     private lateinit var btnShot: Button
+    private lateinit var btnAudio: Button
+
+    private val audioForwarder by lazy { AudioForwarder(this) }
 
     // 依次尝试的分辨率候选：宽、高、帧格式（高分辨率优先，画质最好）
     private val sizeCandidates = arrayOf(
@@ -148,16 +151,20 @@ class MainActivity : AppCompatActivity() {
         surfaceView = findViewById(R.id.surface)
         btnSize = findViewById(R.id.btnSize)
         btnShot = findViewById(R.id.btnShot)
+        btnAudio = findViewById(R.id.btnAudio)
 
         btnSize.setOnClickListener { switchSize() }
         btnShot.setOnClickListener { capture() }
+        btnAudio.setOnClickListener { toggleAudio() }
 
-        // Android 14+：访问 USB 视频类设备必须先持有 CAMERA 运行时权限
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+        // Android 14+：访问 USB 视频类设备必须先持有 CAMERA 运行时权限；音频转发需要 RECORD_AUDIO
+        val needPerms = mutableListOf(Manifest.permission.CAMERA)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), 2)
+            needPerms.add(Manifest.permission.RECORD_AUDIO)
         }
+        ActivityCompat.requestPermissions(this, needPerms.toTypedArray(), 2)
 
         surfaceView.holder.addCallback(object : SurfaceHolder.Callback {            override fun surfaceCreated(holder: SurfaceHolder) {
                 Log.d(TAG, "surfaceCreated")
@@ -233,6 +240,7 @@ class MainActivity : AppCompatActivity() {
                 btnSize.text = "${previewW}x${previewH}"
                 toast("摄像头已连接 ${previewW}x${previewH}")
                 adjustSurfaceAspect(previewW, previewH)
+                autoStartAudio()
             }
             tryStartPreview()
         } catch (e: Exception) {
@@ -269,7 +277,64 @@ class MainActivity : AppCompatActivity() {
         try { cam.setFrameCallback(null, 0) } catch (e: Exception) { }
         try { cam.stopPreview() } catch (e: Exception) { }
         try { cam.destroy() } catch (e: Exception) { }
-        runOnUiThread { btnSize.text = getString(R.string.btn_size) }
+        runOnUiThread {
+            btnSize.text = getString(R.string.btn_size)
+            stopAudio()
+        }
+    }
+
+    // ---------- 音频转发 ----------
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 3 && grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            toggleAudio()
+        }
+    }
+
+    private fun hasAudioPermission(): Boolean =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+
+    /** 摄像头连上后，若已有录音权限且存在 USB 音频输入则自动开播 */
+    private fun autoStartAudio() {
+        if (!hasAudioPermission()) return
+        if (audioForwarder.start()) {
+            btnAudio.text = getString(R.string.btn_audio_on)
+            Log.d(TAG, "音频转发已自动开启")
+        } else {
+            Log.d(TAG, "没有 USB 音频输入，跳过自动开播")
+        }
+    }
+
+    private fun toggleAudio() {
+        if (audioForwarder.isRunning()) {
+            stopAudio()
+            toast("已静音")
+            return
+        }
+        if (!hasAudioPermission()) {
+            ActivityCompat.requestPermissions(
+                this, arrayOf(Manifest.permission.RECORD_AUDIO), 3
+            )
+            toast("需要麦克风权限用于 USB 音频转发，请授权后再点")
+            return
+        }
+        if (audioForwarder.start()) {
+            btnAudio.text = getString(R.string.btn_audio_on)
+            toast("USB 音频已开启")
+        } else {
+            toast("未检测到 USB 音频输入设备")
+        }
+    }
+
+    private fun stopAudio() {
+        if (audioForwarder.isRunning()) {
+            audioForwarder.stop()
+        }
+        btnAudio.text = getString(R.string.btn_audio_off)
     }
 
     private fun switchSize() {
