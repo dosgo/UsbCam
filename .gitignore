@@ -1,0 +1,15 @@
+# Android
+*.apk
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+app/libs/out*/
+app/libs/rebuild/
+tmp_logcat.txt

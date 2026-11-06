@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">USB相机</string>
+    <string name="btn_size">分辨率</string>
+    <string name="btn_shot">拍照</string>
+</resources>

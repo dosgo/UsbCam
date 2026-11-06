@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 常见 UVC 摄像头：设备级 IAD (class 239/2) 与视频设备 (class 14)，外加常见厂商 VID -->
+    <usb-device class="239" subclass="2" />
+    <usb-device class="14" />
+    <usb-device vendor-id="1133" />  <!-- Logitech 0x046d -->
+    <usb-device vendor-id="3141" />  <!-- Sonix 0x0c45 -->
+    <usb-device vendor-id="6380" />  <!-- Arkmicro 0x18ec -->
+    <usb-device vendor-id="6967" />  <!-- Generalplus 0x1b3f -->
+    <usb-device vendor-id="1443" />  <!-- AMK 0x05a3 -->
+    <usb-device vendor-id="6790" />  <!-- WCH 0x1a86 -->
+    <usb-device vendor-id="1507" />  <!-- Genesys 0x05e3 -->
+    <usb-device vendor-id="6432" />  <!-- Gloria 0x1908 -->
+</resources>
