@@ -9,51 +9,69 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- 右侧竖排控制按钮，贴边半透明，不挡中间画面 -->
+    <!-- 右缘控制区：一个「≡」按钮，点击展开/收起菜单 -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical|end"
         android:layout_marginEnd="8dp"
-        android:alpha="0.8"
-        android:background="#66000000"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="6dp">
+        android:gravity="end"
+        android:orientation="vertical">
 
         <Button
-            android:id="@+id/btnShot"
+            android:id="@+id/btnMenu"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minWidth="72dp"
-            android:text="@string/btn_shot"
-            android:textSize="12sp" />
+            android:text="≡"
+            android:textSize="16sp" />
 
-        <Button
-            android:id="@+id/btnSize"
+        <LinearLayout
+            android:id="@+id/menuPanel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:minWidth="72dp"
-            android:text="@string/btn_size"
-            android:textSize="12sp" />
+            android:alpha="0.85"
+            android:background="#66000000"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="6dp"
+            android:visibility="gone">
 
-        <Button
-            android:id="@+id/btnFps"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minWidth="72dp"
-            android:text="@string/btn_fps_auto"
-            android:textSize="12sp" />
+            <Button
+                android:id="@+id/btnShot"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="72dp"
+                android:text="@string/btn_shot"
+                android:textSize="12sp" />
 
-        <Button
-            android:id="@+id/btnAudio"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minWidth="72dp"
-            android:text="@string/btn_audio_off"
-            android:textSize="12sp" />
+            <Button
+                android:id="@+id/btnSize"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minWidth="72dp"
+                android:text="@string/btn_size"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnFps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minWidth="72dp"
+                android:text="@string/btn_fps_auto"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnAudio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minWidth="72dp"
+                android:text="@string/btn_audio_off"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

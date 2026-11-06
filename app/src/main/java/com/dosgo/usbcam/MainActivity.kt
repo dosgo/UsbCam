@@ -60,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnShot: Button
     private lateinit var btnAudio: Button
     private lateinit var btnFps: Button
+    private lateinit var btnMenu: Button
+    private lateinit var menuPanel: android.view.View
 
     private val audioForwarder by lazy { AudioForwarder(this) }
 
@@ -166,11 +168,17 @@ class MainActivity : AppCompatActivity() {
         btnShot = findViewById(R.id.btnShot)
         btnAudio = findViewById(R.id.btnAudio)
         btnFps = findViewById(R.id.btnFps)
+        btnMenu = findViewById(R.id.btnMenu)
+        menuPanel = findViewById(R.id.menuPanel)
 
-        btnSize.setOnClickListener { switchSize() }
-        btnShot.setOnClickListener { capture() }
-        btnAudio.setOnClickListener { toggleAudio() }
-        btnFps.setOnClickListener { switchFps() }
+        btnSize.setOnClickListener { switchSize(); collapseMenu() }
+        btnShot.setOnClickListener { capture(); collapseMenu() }
+        btnAudio.setOnClickListener { toggleAudio(); collapseMenu() }
+        btnFps.setOnClickListener { switchFps(); collapseMenu() }
+        btnMenu.setOnClickListener {
+            menuPanel.visibility = if (menuPanel.visibility == android.view.View.VISIBLE)
+                android.view.View.GONE else android.view.View.VISIBLE
+        }
 
         // Android 14+：访问 USB 视频类设备必须先持有 CAMERA 运行时权限；音频转发需要 RECORD_AUDIO
         val needPerms = mutableListOf(Manifest.permission.CAMERA)
@@ -289,20 +297,31 @@ class MainActivity : AppCompatActivity() {
 
     /** 从 UVC 描述符读取当前分辨率+格式下支持的帧率档位（worker 线程） */
     private fun refreshSupportedFps(cam: UVCCamera) {
-        supportedFps = try {
-            cam.getSupportedSizeList()
-                .filter { it.width == previewW && it.height == previewH && it.fps != null && it.fps.isNotEmpty() }
-                .flatMap { it.fps.toList() }
-                .filter { it > 0f }
-                .distinct()
-                .sortedDescending()
-                .toFloatArray()
-        } catch (e: Exception) {
-            FloatArray(0)
+        val raw = try { cam.supportedSize } catch (e: Exception) { "<err:${e.message}>" }
+        Log.w(TAG, "UVC supportedSize 原始JSON: ${raw.take(600)}")
+        val all = try { cam.getSupportedSizeList() } catch (e: Exception) { emptyList() }
+        Log.w(TAG, "解析出 ${all.size} 个 Size: " + all.joinToString { "${it.width}x${it.height}(fps=${it.fps?.joinToString(",")})" }.take(600))
+        supportedFps = all
+            .filter { it.width == previewW && it.height == previewH && it.fps != null && it.fps.isNotEmpty() }
+            .flatMap { it.fps.toList() }
+            .filter { it > 0f && it < 1000f }
+            // 四舍五入去重：59.94/60、29.97/30 合并成一档，避免按钮按不完
+            .groupBy { Math.round(it) }
+            .map { it.key.toFloat() }
+            .sortedDescending()
+            .toFloatArray()
+        if (supportedFps.isEmpty()) {
+            // 便宜采集卡固件常不报 frame interval 描述符，退回常用档（协商不支持也不会崩）
+            supportedFps = floatArrayOf(60f, 30f, 15f)
+            Log.w(TAG, "UVC 未报告帧率，使用常用档兜底")
         }
         fpsIndex = 0
-        Log.d(TAG, "UVC 报告可用帧率: ${supportedFps.joinToString("/")}")
+        Log.w(TAG, "当前 ${previewW}x${previewH} 可用帧率: ${supportedFps.joinToString("/")}")
         runOnUiThread { btnFps.text = "帧率:自动" }
+    }
+
+    private fun collapseMenu() {
+        if (::menuPanel.isInitialized) menuPanel.visibility = android.view.View.GONE
     }
 
     private fun tryStartPreview() {
