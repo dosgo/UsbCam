@@ -63,10 +63,17 @@ class MainActivity : AppCompatActivity() {
 
     private val audioForwarder by lazy { AudioForwarder(this) }
 
-    // 帧率档位：自动=5~60 交给摄像头挑最高；固定档锁死
-    private val fpsOptions = arrayOf("自动", "60", "30", "15")
+    // 帧率档位：0=自动(5~60 让摄像头挑最高)，其余取自 UVC 报告的当前分辨率可用帧率
+    private var supportedFps: FloatArray = FloatArray(0)
     private var fpsIndex = 0
     private var previewFmt = UVCCamera.FRAME_FORMAT_MJPEG
+    private val switchBusy = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    private fun fpsLabel(i: Int): String =
+        if (i == 0) "自动" else {
+            val f = supportedFps[i - 1]
+            if (f == f.toLong().toFloat()) "${f.toLong()}" else String.format("%.1f", f)
+        }
 
     // 依次尝试的分辨率候选：宽、高、帧格式（高分辨率优先，画质最好）
     private val sizeCandidates = arrayOf(
@@ -223,7 +230,7 @@ class MainActivity : AppCompatActivity() {
             for (i in sizeCandidates.indices) {
                 val idx = (sizeIndex + i) % sizeCandidates.size
                 val c = sizeCandidates[idx]
-                Log.d(TAG, "尝试分辨率 ${c[0]}x${c[1]} fmt=${c[2]} fps=${fpsOptions[fpsIndex]}")
+                Log.d(TAG, "尝试分辨率 ${c[0]}x${c[1]} fmt=${c[2]} fps=${fpsLabel(fpsIndex)}")
                 if (applySize(cam, c[0], c[1], c[2])) {
                     sizeIndex = idx
                     previewW = c[0]
@@ -243,6 +250,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             uvcCamera = cam
+            refreshSupportedFps(cam)
             runOnUiThread {
                 btnSize.text = "${previewW}x${previewH}"
                 toast("摄像头已连接 ${previewW}x${previewH}")
@@ -255,30 +263,46 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** 按当前帧率档位应用分辨率，成功返回 true（固定档失败会先试自动档） */
+    /** 按当前帧率档位应用分辨率，成功返回 true（非法档位自动回退，绝不留下坏状态） */
     private fun applySize(cam: UVCCamera, w: Int, h: Int, fmt: Int): Boolean {
-        return try {
-            if (fpsIndex == 0) {
-                cam.setPreviewSize(w, h, 5, 60, fmt, UVCCamera.DEFAULT_BANDWIDTH)
-            } else {
-                val f = fpsOptions[fpsIndex].toInt()
+        // 固定档：只在 UVC 报告过支持时才用
+        if (fpsIndex > 0 && fpsIndex - 1 < supportedFps.size) {
+            val f = Math.round(supportedFps[fpsIndex - 1])
+            try {
                 cam.setPreviewSize(w, h, f, f, fmt, UVCCamera.DEFAULT_BANDWIDTH)
-            }
+                return true
+            } catch (e: Exception) { }
+        }
+        // 自动档（或固定档失败回退）
+        return try {
+            cam.setPreviewSize(w, h, 5, 60, fmt, UVCCamera.DEFAULT_BANDWIDTH)
             true
         } catch (e: Exception) {
-            if (fpsIndex == 0) {
-                try {
-                    cam.setPreviewSize(w, h, fmt)
-                    return true
-                } catch (e2: Exception) { }
-            } else {
-                try {
-                    cam.setPreviewSize(w, h, 5, 60, fmt, UVCCamera.DEFAULT_BANDWIDTH)
-                    return true
-                } catch (e2: Exception) { }
+            try {
+                cam.setPreviewSize(w, h, fmt)
+                true
+            } catch (e2: Exception) {
+                false
             }
-            false
         }
+    }
+
+    /** 从 UVC 描述符读取当前分辨率+格式下支持的帧率档位（worker 线程） */
+    private fun refreshSupportedFps(cam: UVCCamera) {
+        supportedFps = try {
+            cam.getSupportedSizeList()
+                .filter { it.width == previewW && it.height == previewH && it.fps != null && it.fps.isNotEmpty() }
+                .flatMap { it.fps.toList() }
+                .filter { it > 0f }
+                .distinct()
+                .sortedDescending()
+                .toFloatArray()
+        } catch (e: Exception) {
+            FloatArray(0)
+        }
+        fpsIndex = 0
+        Log.d(TAG, "UVC 报告可用帧率: ${supportedFps.joinToString("/")}")
+        runOnUiThread { btnFps.text = "帧率:自动" }
     }
 
     private fun tryStartPreview() {
@@ -372,54 +396,69 @@ class MainActivity : AppCompatActivity() {
 
     private fun switchSize() {
         val handler = workerHandler ?: return
+        if (!switchBusy.compareAndSet(false, true)) return   // native 流不支持并发切换，防抖
         handler.post {
-            val cam = uvcCamera ?: run {
-                runOnUiThread { toast("未连接摄像头") }
-                return@post
-            }
-            if (previewStarted) {
-                try { cam.stopPreview() } catch (e: Exception) { }
-                previewStarted = false
-            }
-            for (i in 1..sizeCandidates.size) {
-                val idx = (sizeIndex + i) % sizeCandidates.size
-                val c = sizeCandidates[idx]
-                if (applySize(cam, c[0], c[1], c[2])) {
-                    sizeIndex = idx
-                    previewW = c[0]
-                    previewH = c[1]
-                    previewFmt = c[2]
-                    break
+            try {
+                val cam = uvcCamera ?: run {
+                    runOnUiThread { toast("未连接摄像头") }
+                    return@post
                 }
+                if (previewStarted) {
+                    try { cam.stopPreview() } catch (e: Exception) { }
+                    previewStarted = false
+                }
+                for (i in 1..sizeCandidates.size) {
+                    val idx = (sizeIndex + i) % sizeCandidates.size
+                    val c = sizeCandidates[idx]
+                    if (applySize(cam, c[0], c[1], c[2])) {
+                        sizeIndex = idx
+                        previewW = c[0]
+                        previewH = c[1]
+                        previewFmt = c[2]
+                        break
+                    }
+                }
+                refreshSupportedFps(cam)
+                runOnUiThread {
+                    btnSize.text = "${previewW}x${previewH}"
+                    adjustSurfaceAspect(previewW, previewH)
+                }
+                tryStartPreview()
+            } finally {
+                switchBusy.set(false)
             }
-            runOnUiThread {
-                btnSize.text = "${previewW}x${previewH}"
-                adjustSurfaceAspect(previewW, previewH)
-            }
-            tryStartPreview()
         }
     }
 
     private fun switchFps() {
         val handler = workerHandler ?: return
+        if (!switchBusy.compareAndSet(false, true)) return   // native 流不支持并发切换，防抖
         handler.post {
-            val cam = uvcCamera ?: run {
-                runOnUiThread { toast("未连接摄像头") }
-                return@post
+            try {
+                val cam = uvcCamera ?: run {
+                    runOnUiThread { toast("未连接摄像头") }
+                    return@post
+                }
+                val n = supportedFps.size + 1
+                val next = (fpsIndex + 1) % n
+                if (previewStarted) {
+                    try { cam.stopPreview() } catch (e: Exception) { }
+                    previewStarted = false
+                }
+                val prev = fpsIndex
+                fpsIndex = next
+                if (!applySize(cam, previewW, previewH, previewFmt)) {
+                    fpsIndex = prev
+                    runOnUiThread { toast("该帧率不可用，已保持原档") }
+                }
+                runOnUiThread {
+                    btnFps.text = "帧率:${fpsLabel(fpsIndex)}"
+                    toast("帧率 ${fpsLabel(fpsIndex)}")
+                }
+                tryStartPreview()
+            } finally {
+                switchBusy.set(false)
             }
-            fpsIndex = (fpsIndex + 1) % fpsOptions.size
-            if (previewStarted) {
-                try { cam.stopPreview() } catch (e: Exception) { }
-                previewStarted = false
-            }
-            if (!applySize(cam, previewW, previewH, previewFmt)) {
-                runOnUiThread { toast("当前分辨率不支持该帧率") }
-            }
-            runOnUiThread {
-                btnFps.text = "帧率:${fpsOptions[fpsIndex]}"
-                toast("帧率 ${fpsOptions[fpsIndex]}")
-            }
-            tryStartPreview()
         }
     }
 
